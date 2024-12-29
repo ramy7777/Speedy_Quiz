@@ -15,6 +15,17 @@ let gameHost = null;
 let timerInterval;
 let currentTimer = 10;
 
+function resetGameState() {
+    gameInProgress = false;
+    currentQuestion = 0;
+    questions = [];
+    gameHost = null;
+    currentTimer = 10;
+    clearInterval(timerInterval);
+    clearTimeout(answerTimeout);
+    players.clear();
+}
+
 function shuffleArray(array) {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -127,15 +138,17 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         if (players.has(socket.id)) {
             players.delete(socket.id);
-            if (socket.id === gameHost) {
+            
+            // If no players left, reset the game
+            if (players.size === 0) {
+                resetGameState();
+            } else if (socket.id === gameHost) {
+                // If host left but other players remain, assign new host
                 const remainingPlayers = Array.from(players.keys());
-                if (remainingPlayers.length > 0) {
-                    gameHost = remainingPlayers[0];
-                    io.to(gameHost).emit('youAreHost');
-                } else {
-                    gameHost = null;
-                }
+                gameHost = remainingPlayers[0];
+                io.to(gameHost).emit('youAreHost');
             }
+            
             io.emit('playerLeft', Array.from(players.values()));
         }
     });
@@ -167,15 +180,7 @@ function moveToNextQuestion() {
         io.emit('gameOver', Array.from(players.values()));
         
         // Reset game state
-        currentQuestion = 0;
-        questions = [];
-        gameHost = null;
-        
-        // Reset player scores
-        for (let player of players.values()) {
-            player.score = 0;
-            player.answered = false;
-        }
+        resetGameState();
     }
 }
 
