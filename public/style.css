@@ -293,6 +293,79 @@ button:hover:not(.disabled) {
     z-index: 1;
 }
 
+.final-scoreboard {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 600px;
+    backdrop-filter: blur(10px);
+}
+
+.final-scoreboard h2 {
+    color: #ffd700;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.final-score-item {
+    font-size: 1.2em;
+    margin: 15px 0;
+    padding: 15px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.final-score-item.current-player {
+    font-weight: bold;
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.rank-1 {
+    background: linear-gradient(45deg, rgba(255, 215, 0, 0.3), rgba(255, 215, 0, 0.1));
+    transform: scale(1.05);
+    font-size: 1.4em;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+}
+
+.rank-2 {
+    background: linear-gradient(45deg, rgba(192, 192, 192, 0.3), rgba(192, 192, 192, 0.1));
+    transform: scale(1.03);
+    font-size: 1.3em;
+    box-shadow: 0 0 12px rgba(192, 192, 192, 0.2);
+}
+
+.rank-3 {
+    background: linear-gradient(45deg, rgba(205, 127, 50, 0.3), rgba(205, 127, 50, 0.1));
+    transform: scale(1.01);
+    font-size: 1.2em;
+    box-shadow: 0 0 10px rgba(205, 127, 50, 0.2);
+}
+
+#scoreboard-screen button {
+    margin-top: 20px;
+    padding: 12px 24px;
+    font-size: 1.2em;
+    background: linear-gradient(45deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#scoreboard-screen button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(45deg, #45a049, #4CAF50);
+}
+
 /* Snowfall Effect */
 .snowflake {
     position: fixed;

@@ -201,28 +201,31 @@ function moveToNextQuestion() {
     currentTimer = 10;
     currentQuestion++;
     
-    // Reset answered status for all players
-    for (let player of players.values()) {
-        player.answered = false;
-    }
-
-    if (currentQuestion < questions.length) {
-        // Wait 1 second before showing next question
-        setTimeout(() => {
-            io.emit('newQuestion', {
-                question: questions[currentQuestion],
-                currentQuestion: currentQuestion,
-                players: Array.from(players.values())
-            });
-            startTimer();
-        }, 1000);
-    } else {
+    if (currentQuestion >= questions.length) {
         // Game is over
-        gameInProgress = false;
-        io.emit('gameOver', Array.from(players.values()));
-        
-        // Reset game state
+        const sortedPlayers = Array.from(players.values())
+            .sort((a, b) => b.score - a.score);
+
+        // Add rank to players
+        const rankedPlayers = sortedPlayers.map((player, index) => ({
+            ...player,
+            rank: index + 1
+        }));
+
+        io.emit('gameOver', rankedPlayers);
         resetGameState();
+    } else {
+        // Reset answered status for all players
+        for (let [id, player] of players) {
+            player.answered = false;
+        }
+        io.emit('newQuestion', {
+            question: questions[currentQuestion],
+            currentQuestion: currentQuestion,
+            totalQuestions: questions.length,
+            players: Array.from(players.values())
+        });
+        startTimer();
     }
 }
 

@@ -7,8 +7,6 @@ const playerList = document.getElementById('player-list');
 const questionText = document.getElementById('question-text');
 const optionsContainer = document.getElementById('options-container');
 const timerDisplay = document.getElementById('timer');
-const scoreboardList = document.getElementById('scoreboard-list');
-const playAgainBtn = document.getElementById('play-again-btn');
 const startGameBtn = document.getElementById('start-game-btn');
 const startGameMessage = document.getElementById('start-game-message');
 const hostControls = document.getElementById('host-controls');
@@ -19,19 +17,15 @@ const unmutedIcon = muteBtn.querySelector('.unmuted');
 
 let isHost = false;
 let currentQuestionNumber = 0;
+let playerName;
 
 // Event Listeners
 joinButton.addEventListener('click', () => {
-    const playerName = playerNameInput.value.trim();
+    playerName = playerNameInput.value.trim();
     if (playerName) {
         socket.emit('joinGame', playerName);
         showScreen('waiting-screen');
     }
-});
-
-playAgainBtn.addEventListener('click', () => {
-    showScreen('login-screen');
-    playerNameInput.value = '';
 });
 
 startGameBtn.addEventListener('click', () => {
@@ -61,7 +55,6 @@ socket.on('gameStart', (data) => {
     currentQuestionNumber = data.currentQuestion + 1;
     questionNumber.textContent = currentQuestionNumber + '/' + data.totalQuestions;
     displayQuestion(data.question);
-    updateScoreboard(data.players);
     startSnowfall();
     soundManager.playBackground();
 });
@@ -70,21 +63,20 @@ socket.on('newQuestion', (data) => {
     currentQuestionNumber = data.currentQuestion + 1;
     questionNumber.textContent = currentQuestionNumber + '/20';
     displayQuestion(data.question);
-    updateScoreboard(data.players);
 });
 
 socket.on('updateTimer', (data) => {
     updateTimer(data.time);
 });
 
-socket.on('updateScores', (players) => {
-    updateScoreboard(players);
-});
-
-socket.on('gameOver', (players) => {
+socket.on('gameOver', (rankedPlayers) => {
     showScreen('scoreboard-screen');
-    displayFinalScores(players);
-    soundManager.playGameOver();
+    displayFinalScores(rankedPlayers);
+    // Only play victory sound for top 3 players
+    const currentPlayer = rankedPlayers.find(p => p.name === playerName);
+    if (currentPlayer && currentPlayer.rank <= 3) {
+        soundManager.playGameOver();
+    }
 });
 
 socket.on('playerLeft', (data) => {
@@ -181,28 +173,33 @@ function updateTimer(time) {
     }
 }
 
-function updateScoreboard(players) {
-    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-    scoreboardList.innerHTML = '';
-    
-    sortedPlayers.forEach(player => {
-        const scoreItem = document.createElement('div');
-        scoreItem.classList.add('score-item');
-        scoreItem.textContent = `${player.name}: ${player.score}`;
-        scoreboardList.appendChild(scoreItem);
-    });
-}
-
 function displayFinalScores(players) {
-    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-    scoreboardList.innerHTML = '';
+    const scoreboardContent = document.getElementById('final-scoreboard');
+    scoreboardContent.innerHTML = '<h2>Final Scores</h2>';
     
-    sortedPlayers.forEach((player, index) => {
-        const scoreItem = document.createElement('div');
-        scoreItem.classList.add('score-item');
-        if (index === 0) scoreItem.classList.add('winner');
-        scoreItem.textContent = `${player.name}: ${player.score}`;
-        scoreboardList.appendChild(scoreItem);
+    players.forEach(player => {
+        const playerScore = document.createElement('div');
+        playerScore.classList.add('final-score-item');
+        
+        // Add medal emoji for top 3
+        let medal = '';
+        if (player.rank === 1) medal = '🥇 ';
+        else if (player.rank === 2) medal = '🥈 ';
+        else if (player.rank === 3) medal = '🥉 ';
+        
+        playerScore.textContent = `${medal}${player.name}: ${player.score} points`;
+        
+        // Highlight current player
+        if (player.name === playerName) {
+            playerScore.classList.add('current-player');
+        }
+        
+        // Add special styling for top 3
+        if (player.rank <= 3) {
+            playerScore.classList.add(`rank-${player.rank}`);
+        }
+        
+        scoreboardContent.appendChild(playerScore);
     });
 }
 
