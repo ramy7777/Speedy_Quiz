@@ -150,8 +150,14 @@ function displayQuestion(question) {
 }
 
 function selectAnswer(index) {
-    socket.emit('submitAnswer', index);
-    disableOptions();
+    if (!optionsContainer.classList.contains('disabled')) {
+        // Add haptic feedback on mobile
+        if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(50); // Short 50ms vibration
+        }
+        socket.emit('submitAnswer', index);
+        disableOptions();
+    }
 }
 
 function disableOptions() {
