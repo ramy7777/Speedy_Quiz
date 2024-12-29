@@ -89,9 +89,10 @@ socket.on('newQuestion', (data) => {
 
 socket.on('answerResult', (data) => {
     const options = optionsContainer.children;
-    const correctOption = options[data.correctAnswer];
     
+    // Only show results if the player actually answered
     if (data.selectedAnswer !== null) {
+        const correctOption = options[data.correctAnswer];
         const selectedOption = options[data.selectedAnswer];
         if (data.correct) {
             selectedOption.classList.add('correct');
@@ -99,10 +100,8 @@ socket.on('answerResult', (data) => {
             selectedOption.classList.add('incorrect');
             correctOption.classList.add('correct');
         }
-    } else {
-        // If it was a timeout, just show the correct answer
-        correctOption.classList.add('correct');
     }
+    // For timeouts, don't show any feedback
 });
 
 socket.on('gameOver', (data) => {
@@ -181,7 +180,7 @@ function startTimer() {
         if (timeLeft <= 0) {
             clearInterval(gameTimer);
             disableOptions();
-            // Send a timeout answer to the server
+            // Just notify server about timeout without showing correct answer
             socket.emit('timeoutAnswer', {
                 roomId: currentRoom
             });

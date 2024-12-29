@@ -162,12 +162,11 @@ io.on('connection', (socket) => {
         if (!player || player.answered) return;
 
         player.answered = true;
-        const question = questions[room.currentQuestion];
-
-        // Send timeout result to the player
+        
+        // For timeout, don't send back any answer result
         socket.emit('answerResult', {
             selectedAnswer: null,
-            correctAnswer: question.correct,
+            correctAnswer: null,
             correct: false
         });
 
@@ -181,6 +180,7 @@ io.on('connection', (socket) => {
         // Check if all players have answered
         const allAnswered = room.players.every(p => p.answered);
         if (allAnswered) {
+            // Shorter delay since we're not showing correct answer
             setTimeout(() => {
                 room.currentQuestion++;
                 if (room.currentQuestion < questions.length) {
@@ -196,7 +196,7 @@ io.on('connection', (socket) => {
                         players: room.players.sort((a, b) => b.score - a.score)
                     });
                 }
-            }, 2000); // Show correct answer for 2 seconds
+            }, 1000); // Reduced from 2000ms to 1000ms
         }
     }
 
@@ -209,9 +209,10 @@ io.on('connection', (socket) => {
             const unansweredPlayers = room.players.filter(p => !p.answered);
             unansweredPlayers.forEach(player => {
                 player.answered = true;
+                // Don't send answer result for timeouts
                 io.to(player.id).emit('answerResult', {
                     selectedAnswer: null,
-                    correctAnswer: questions[room.currentQuestion].correct,
+                    correctAnswer: null,
                     correct: false
                 });
             });
