@@ -228,15 +228,21 @@ button:hover:not(.disabled) {
 
 .timer {
     font-size: 2em;
-    color: #ffffff;
-    text-align: center;
-    margin: 15px 0;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    font-weight: bold;
+    margin: 10px 0;
+    color: white;
+    transition: color 0.3s ease;
 }
 
 .timer.warning {
     color: #ff4444;
-    animation: pulse 1s infinite, shake 0.5s infinite;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 .scoreboard {

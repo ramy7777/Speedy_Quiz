@@ -70,6 +70,10 @@ socket.on('newQuestion', (data) => {
     updateScoreboard(data.players);
 });
 
+socket.on('updateTimer', (data) => {
+    updateTimer(data.time);
+});
+
 socket.on('updateScores', (players) => {
     updateScoreboard(players);
 });
@@ -119,8 +123,6 @@ function displayQuestion(question) {
         button.onclick = () => selectAnswer(index);
         optionsContainer.appendChild(button);
     });
-    
-    startTimer();
 }
 
 function selectAnswer(index) {
@@ -135,26 +137,16 @@ function disableOptions() {
     }
 }
 
-function startTimer() {
-    let timeLeft = 10;
-    updateTimer(timeLeft);
-    
-    const timer = setInterval(() => {
-        timeLeft--;
-        updateTimer(timeLeft);
-        
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            disableOptions();
-        }
-    }, 1000);
-}
-
 function updateTimer(time) {
     if (time < 0) time = 0;
-    const color = time <= 3 ? 'red' : 'white';
-    timerDisplay.style.color = color;
     timerDisplay.textContent = time;
+    
+    // Only add the warning class for 3 seconds or less
+    if (time <= 3) {
+        timerDisplay.classList.add('warning');
+    } else {
+        timerDisplay.classList.remove('warning');
+    }
 }
 
 function updateScoreboard(players) {

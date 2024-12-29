@@ -12,6 +12,8 @@ let currentQuestion = 0;
 let questions = [];
 let answerTimeout;
 let gameHost = null;
+let timerInterval;
+let currentTimer = 10;
 
 function shuffleArray(array) {
     const shuffled = [...array];
@@ -24,6 +26,24 @@ function shuffleArray(array) {
 
 function getRandomQuestions(count) {
     return shuffleArray(allQuestions).slice(0, count);
+}
+
+function startTimer() {
+    clearInterval(timerInterval);
+    clearTimeout(answerTimeout);
+    
+    currentTimer = 10;
+    io.emit('updateTimer', { time: currentTimer });
+    
+    timerInterval = setInterval(() => {
+        currentTimer--;
+        io.emit('updateTimer', { time: currentTimer });
+        
+        if (currentTimer <= 0) {
+            clearInterval(timerInterval);
+            moveToNextQuestion();
+        }
+    }, 1000);
 }
 
 io.on('connection', (socket) => {
@@ -61,16 +81,16 @@ io.on('connection', (socket) => {
         if (socket.id === gameHost && !gameInProgress && players.size > 0) {
             gameInProgress = true;
             currentQuestion = 0;
-            // Get 20 random questions when the game starts
             questions = getRandomQuestions(20);
             
             io.emit('gameStart', {
-                question: questions[0], // Send only the first question
+                question: questions[0],
                 currentQuestion: 0,
                 totalQuestions: questions.length,
                 players: Array.from(players.values())
             });
-            startAnswerTimeout();
+            
+            startTimer();
         }
     });
 
@@ -86,7 +106,7 @@ io.on('connection', (socket) => {
             // Check if all players have answered
             const allAnswered = Array.from(players.values()).every(p => p.answered);
             if (allAnswered) {
-                clearTimeout(answerTimeout);
+                clearInterval(timerInterval);
                 moveToNextQuestion();
             }
         }
@@ -109,12 +129,9 @@ io.on('connection', (socket) => {
     });
 });
 
-function startAnswerTimeout() {
-    clearTimeout(answerTimeout);
-    answerTimeout = setTimeout(moveToNextQuestion, 10000);
-}
-
 function moveToNextQuestion() {
+    clearInterval(timerInterval);
+    currentTimer = 10;
     currentQuestion++;
     
     // Reset answered status for all players
@@ -123,12 +140,15 @@ function moveToNextQuestion() {
     }
 
     if (currentQuestion < questions.length) {
-        io.emit('newQuestion', {
-            question: questions[currentQuestion],
-            currentQuestion: currentQuestion,
-            players: Array.from(players.values())
-        });
-        startAnswerTimeout();
+        // Wait 1 second before showing next question
+        setTimeout(() => {
+            io.emit('newQuestion', {
+                question: questions[currentQuestion],
+                currentQuestion: currentQuestion,
+                players: Array.from(players.values())
+            });
+            startTimer();
+        }, 1000);
     } else {
         // Game is over
         gameInProgress = false;
