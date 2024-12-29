@@ -181,7 +181,22 @@ function updateTimer(time) {
 
 function displayFinalScores(players) {
     const scoreboardContent = document.getElementById('final-scoreboard');
-    scoreboardContent.innerHTML = '<h2>Final Scores</h2>';
+    
+    // Get top 3 players
+    const top3Players = players
+        .filter(p => p.rank <= 3)
+        .sort((a, b) => a.rank - b.rank)
+        .map(p => p.name)
+        .join(', ');
+    
+    // Create winners message
+    const winnersMessage = document.createElement('div');
+    winnersMessage.classList.add('winners-message');
+    winnersMessage.innerHTML = `<h1>🎉 ${top3Players} 🎉<br>Dance Together Now!</h1>`;
+    
+    scoreboardContent.innerHTML = '';
+    scoreboardContent.appendChild(winnersMessage);
+    scoreboardContent.innerHTML += '<h2>Final Scores</h2>';
     
     players.forEach(player => {
         const playerScore = document.createElement('div');
