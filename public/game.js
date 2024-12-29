@@ -13,6 +13,9 @@ const startGameBtn = document.getElementById('start-game-btn');
 const startGameMessage = document.getElementById('start-game-message');
 const hostControls = document.getElementById('host-controls');
 const questionNumber = document.getElementById('question-number');
+const muteBtn = document.getElementById('mute-btn');
+const mutedIcon = muteBtn.querySelector('.muted');
+const unmutedIcon = muteBtn.querySelector('.unmuted');
 
 let isHost = false;
 let currentQuestionNumber = 0;
@@ -35,6 +38,12 @@ startGameBtn.addEventListener('click', () => {
     if (!startGameBtn.classList.contains('disabled')) {
         socket.emit('startGame');
     }
+});
+
+muteBtn.addEventListener('click', () => {
+    const isMuted = soundManager.toggleMute();
+    mutedIcon.classList.toggle('hidden', !isMuted);
+    unmutedIcon.classList.toggle('hidden', isMuted);
 });
 
 // Socket Events
@@ -61,6 +70,7 @@ socket.on('gameStart', (data) => {
     displayQuestion(data.question);
     updateScoreboard(data.players);
     startSnowfall();
+    soundManager.playBackground();
 });
 
 socket.on('newQuestion', (data) => {
@@ -81,6 +91,7 @@ socket.on('updateScores', (players) => {
 socket.on('gameOver', (players) => {
     showScreen('scoreboard-screen');
     displayFinalScores(players);
+    soundManager.playGameOver();
 });
 
 socket.on('playerLeft', (players) => {
@@ -101,9 +112,11 @@ socket.on('answerResult', (data) => {
     
     if (data.correct) {
         selectedOption.classList.add('correct');
+        soundManager.playCorrect();
     } else {
         selectedOption.classList.add('incorrect');
         correctOption.classList.add('correct');
+        soundManager.playIncorrect();
     }
 });
 
@@ -224,3 +237,8 @@ function startSnowfall() {
     // Continue creating snowflakes less frequently
     setInterval(createSnowflake, 300); // Increased from 150 to 300ms
 }
+
+// Preload sounds when the page loads
+window.addEventListener('load', () => {
+    soundManager.preloadAll();
+});

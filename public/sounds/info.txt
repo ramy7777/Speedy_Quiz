@@ -1,0 +1,5 @@
+This directory contains Christmas MIDI sounds for the quiz game:
+1. background.mp3 - Jingle Bells background music
+2. correct.mp3 - Cheerful bell sound for correct answers
+3. incorrect.mp3 - Soft "uh-oh" sound for incorrect answers
+4. gameover.mp3 - Festive victory fanfare

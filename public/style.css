@@ -350,6 +350,33 @@ button:hover:not(.disabled) {
     background: rgba(255, 255, 255, 0.4);
 }
 
+#sound-control {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.mute-button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.mute-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
 @media (max-width: 480px) {
     .screen {
         padding: 20px;

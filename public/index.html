@@ -9,6 +9,12 @@
 </head>
 <body>
     <div class="container">
+        <div id="sound-control">
+            <button id="mute-btn" class="mute-button">
+                <span class="unmuted">🔊</span>
+                <span class="muted hidden">🔇</span>
+            </button>
+        </div>
         <div id="login-screen" class="screen">
             <h1>Imad & Doaa New Year's Party Game</h1>
             <div class="login-form">
@@ -49,6 +55,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="soundManager.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
