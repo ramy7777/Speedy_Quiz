@@ -181,13 +181,30 @@ function displayFinalScores(players) {
         const playerScore = document.createElement('div');
         playerScore.classList.add('final-score-item');
         
-        // Add medal emoji for top 3
+        // Add medal emoji and dance message for top 3
         let medal = '';
-        if (player.rank === 1) medal = '🥇 ';
-        else if (player.rank === 2) medal = '🥈 ';
-        else if (player.rank === 3) medal = '🥉 ';
+        let danceMessage = '';
+        if (player.rank === 1) {
+            medal = '🥇 ';
+            danceMessage = ' 💃 Dance Champion! 🕺';
+        } else if (player.rank === 2) {
+            medal = '🥈 ';
+            danceMessage = ' 💃 Dance Star! 🕺';
+        } else if (player.rank === 3) {
+            medal = '🥉 ';
+            danceMessage = ' 💃 Dance Hero! 🕺';
+        }
         
-        playerScore.textContent = `${medal}${player.name}: ${player.score} points`;
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = `${medal}${player.name}: ${player.score} points`;
+        playerScore.appendChild(nameSpan);
+        
+        if (danceMessage) {
+            const danceSpan = document.createElement('span');
+            danceSpan.classList.add('dance-message');
+            danceSpan.textContent = danceMessage;
+            playerScore.appendChild(danceSpan);
+        }
         
         // Highlight current player
         if (player.name === playerName) {
