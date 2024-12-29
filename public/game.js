@@ -78,6 +78,7 @@ socket.on('gameStart', (data) => {
     displayQuestion(questions[currentQuestionNumber]);
     updateScoreboard(data.players);
     startTimer();
+    startSnowfall(); // Start the snowfall effect
 });
 
 socket.on('newQuestion', (data) => {
@@ -255,4 +256,56 @@ function updateStartButton(playerCount, minPlayers) {
             startGameMessage.textContent = `Waiting for more players... (${playerCount}/${minPlayers})`;
         }
     }
+}
+
+// Snowfall effect
+function createSnowflake() {
+    const snowflake = document.createElement('div');
+    snowflake.classList.add('snowflake');
+    
+    // Random starting position
+    snowflake.style.left = Math.random() * window.innerWidth + 'px';
+    
+    // Random size between 3px and 10px
+    const size = Math.random() * 7 + 3;
+    snowflake.style.width = size + 'px';
+    snowflake.style.height = size + 'px';
+    
+    // Random opacity between 0.4 and 1
+    snowflake.style.opacity = Math.random() * 0.6 + 0.4;
+    
+    // Random animation duration between 5s and 10s
+    const duration = Math.random() * 5 + 5;
+    snowflake.style.animationDuration = duration + 's';
+    
+    // Add some horizontal movement
+    const startPosition = Math.random() * window.innerWidth;
+    const endPosition = startPosition + (Math.random() * 100 - 50);
+    
+    snowflake.animate([
+        { transform: `translateX(${startPosition}px) translateY(-10px)` },
+        { transform: `translateX(${endPosition}px) translateY(${window.innerHeight + 10}px)` }
+    ], {
+        duration: duration * 1000,
+        easing: 'linear',
+        fill: 'forwards'
+    });
+    
+    document.body.appendChild(snowflake);
+    
+    // Remove snowflake after animation
+    setTimeout(() => {
+        snowflake.remove();
+    }, duration * 1000);
+}
+
+// Create snowflakes at regular intervals
+function startSnowfall() {
+    // Create initial batch of snowflakes
+    for (let i = 0; i < 20; i++) {
+        setTimeout(createSnowflake, Math.random() * 3000);
+    }
+    
+    // Continue creating snowflakes
+    setInterval(createSnowflake, 200);
 }
