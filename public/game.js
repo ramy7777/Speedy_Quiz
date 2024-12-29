@@ -78,7 +78,7 @@ socket.on('gameStart', (data) => {
     displayQuestion(questions[currentQuestionNumber]);
     updateScoreboard(data.players);
     startTimer();
-    startSnowfall(); // Start the snowfall effect
+    startSnowfall();
 });
 
 socket.on('newQuestion', (data) => {
@@ -263,49 +263,35 @@ function createSnowflake() {
     const snowflake = document.createElement('div');
     snowflake.classList.add('snowflake');
     
-    // Random starting position
+    // Random starting position across the width of the screen
     snowflake.style.left = Math.random() * window.innerWidth + 'px';
     
-    // Random size between 3px and 10px
-    const size = Math.random() * 7 + 3;
-    snowflake.style.width = size + 'px';
-    snowflake.style.height = size + 'px';
+    // Random size variation (smaller range)
+    const size = Math.random() * 0.7 + 0.5; // Size between 0.5em and 1.2em
+    snowflake.style.fontSize = size + 'em';
     
-    // Random opacity between 0.4 and 1
-    snowflake.style.opacity = Math.random() * 0.6 + 0.4;
+    // Random opacity
+    snowflake.style.opacity = Math.random() * 0.3 + 0.5; // Between 0.5 and 0.8
     
-    // Random animation duration between 5s and 10s
-    const duration = Math.random() * 5 + 5;
-    snowflake.style.animationDuration = duration + 's';
-    
-    // Add some horizontal movement
-    const startPosition = Math.random() * window.innerWidth;
-    const endPosition = startPosition + (Math.random() * 100 - 50);
-    
-    snowflake.animate([
-        { transform: `translateX(${startPosition}px) translateY(-10px)` },
-        { transform: `translateX(${endPosition}px) translateY(${window.innerHeight + 10}px)` }
-    ], {
-        duration: duration * 1000,
-        easing: 'linear',
-        fill: 'forwards'
-    });
+    // Random fall duration
+    const fallDuration = Math.random() * 3 + 7; // Between 7 and 10 seconds
+    snowflake.style.animationDuration = fallDuration + 's';
     
     document.body.appendChild(snowflake);
     
     // Remove snowflake after animation
     setTimeout(() => {
         snowflake.remove();
-    }, duration * 1000);
+    }, fallDuration * 1000);
 }
 
 // Create snowflakes at regular intervals
 function startSnowfall() {
     // Create initial batch of snowflakes
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 30; i++) { // Reduced from 75 to 30
         setTimeout(createSnowflake, Math.random() * 3000);
     }
     
-    // Continue creating snowflakes
-    setInterval(createSnowflake, 200);
+    // Continue creating snowflakes less frequently
+    setInterval(createSnowflake, 300); // Increased from 150 to 300ms
 }
