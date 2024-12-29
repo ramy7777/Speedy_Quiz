@@ -90,12 +90,17 @@ socket.on('newQuestion', (data) => {
 socket.on('answerResult', (data) => {
     const options = optionsContainer.children;
     const correctOption = options[data.correctAnswer];
-    const selectedOption = options[data.selectedAnswer];
-
-    if (data.correct) {
-        selectedOption.classList.add('correct');
+    
+    if (data.selectedAnswer !== null) {
+        const selectedOption = options[data.selectedAnswer];
+        if (data.correct) {
+            selectedOption.classList.add('correct');
+        } else {
+            selectedOption.classList.add('incorrect');
+            correctOption.classList.add('correct');
+        }
     } else {
-        selectedOption.classList.add('incorrect');
+        // If it was a timeout, just show the correct answer
         correctOption.classList.add('correct');
     }
 });
@@ -176,6 +181,10 @@ function startTimer() {
         if (timeLeft <= 0) {
             clearInterval(gameTimer);
             disableOptions();
+            // Send a timeout answer to the server
+            socket.emit('timeoutAnswer', {
+                roomId: currentRoom
+            });
         }
     }, 1000);
 }

@@ -1,13 +1,13 @@
 {
-  "name": "virtual-worlds-team-building",
+  "name": "imad-doaa-new-years-party-game",
   "version": "1.0.0",
-  "description": "Virtual Worlds New Year Team Building - A multiplayer quiz game for team building",
+  "description": "A fun New Year's party game for Imad & Doaa's celebration",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "express": "^4.17.1",
+    "socket.io": "^4.1.2"
   }
 }
