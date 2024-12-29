@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const allQuestions = require('./questions');
+const { allQuestions, specialQuestion } = require('./questions');
 
 app.use(express.static('public'));
 
@@ -36,7 +36,14 @@ function shuffleArray(array) {
 }
 
 function getRandomQuestions(count) {
-    return shuffleArray(allQuestions).slice(0, count);
+    // Get one less random question since we'll add the special question
+    const randomQuestions = shuffleArray(allQuestions).slice(0, count - 1);
+    
+    // Add the special question at a random position
+    const insertPosition = Math.floor(Math.random() * count);
+    randomQuestions.splice(insertPosition, 0, specialQuestion);
+    
+    return randomQuestions;
 }
 
 function startTimer() {

@@ -1,3 +1,10 @@
+const specialQuestion = {
+    question: "Who is the star couple of the night?",
+    options: ["Ramy & Zeina", "Imad & Doaa", "Samer & Lara", "Amjad & Nancy"],
+    correct: 1,
+    isSpecial: true
+};
+
 const allQuestions = [
     {
         question: "Which city will host the 2024 Summer Olympics?",
@@ -477,4 +484,4 @@ const allQuestions = [
     }
 ];
 
-module.exports = allQuestions;
+module.exports = { allQuestions, specialQuestion };
