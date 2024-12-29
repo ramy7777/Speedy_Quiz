@@ -39,7 +39,8 @@ io.on('connection', (socket) => {
         room.players.push({
             id: socket.id,
             name: playerName,
-            score: 0
+            score: 0,
+            answered: false
         });
 
         socket.emit('roomJoined', { roomId, players: room.players });
@@ -58,14 +59,34 @@ io.on('connection', (socket) => {
         const player = room.players.find(p => p.id === socket.id);
         if (!player) return;
 
+        // Mark player as answered to prevent multiple answers
+        if (player.answered) return;
+        player.answered = true;
+
         const question = questions[room.currentQuestion];
         if (data.answer === question.correct) {
-            player.score += 1;
+            // Add time bonus: faster answers get more points
+            const timeBonus = Math.max(0, data.timeLeft);
+            player.score += 1 + (timeBonus / 10);
         }
+
+        // Broadcast updated scores to all players
+        io.to(data.roomId).emit('scoreUpdate', {
+            players: room.players
+        });
 
         const allAnswered = room.players.every(p => p.answered);
         if (allAnswered) {
-            nextQuestion(data.roomId);
+            // Show correct answer to all players
+            io.to(data.roomId).emit('revealAnswer', {
+                correct: question.correct,
+                players: room.players
+            });
+
+            // Wait 2 seconds before next question
+            setTimeout(() => {
+                nextQuestion(data.roomId);
+            }, 2000);
         }
     });
 
@@ -96,6 +117,7 @@ function startGame(roomId) {
 function nextQuestion(roomId) {
     const room = rooms.get(roomId);
     room.currentQuestion++;
+    room.players.forEach(player => player.answered = false);
     
     if (room.currentQuestion < questions.length) {
         io.to(roomId).emit('newQuestion', {

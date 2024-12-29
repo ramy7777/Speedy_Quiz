@@ -19,6 +19,7 @@ const playAgainBtn = document.getElementById('play-again-btn');
 
 let currentRoom = null;
 let gameTimer = null;
+let currentTimeLeft = 0;
 
 // Event Listeners
 joinButton.addEventListener('click', () => {
@@ -64,6 +65,21 @@ socket.on('gameEnd', (data) => {
     displayFinalScores(data.players);
 });
 
+socket.on('scoreUpdate', (data) => {
+    updateScoreboard(data.players);
+});
+
+socket.on('revealAnswer', (data) => {
+    const options = optionsContainer.children;
+    for (let i = 0; i < options.length; i++) {
+        if (i === data.correct) {
+            options[i].style.backgroundColor = '#4CAF50';
+        } else {
+            options[i].style.backgroundColor = '#ff4444';
+        }
+    }
+});
+
 // Helper Functions
 function showScreen(screenName) {
     Object.values(screens).forEach(screen => screen.classList.add('hidden'));
@@ -93,6 +109,7 @@ function startTimer() {
     timerDisplay.textContent = timeLeft;
     gameTimer = setInterval(() => {
         timeLeft--;
+        currentTimeLeft = timeLeft;
         timerDisplay.textContent = timeLeft;
         
         if (timeLeft <= 0) {
@@ -106,7 +123,8 @@ function submitAnswer(answerIndex) {
     clearInterval(gameTimer);
     socket.emit('answer', {
         roomId: currentRoom,
-        answer: answerIndex
+        answer: answerIndex,
+        timeLeft: currentTimeLeft
     });
     optionsContainer.style.pointerEvents = 'none';
 }
@@ -123,7 +141,7 @@ function updateScoreboard(players) {
 
 function displayWinner(winner) {
     document.getElementById('winner-display').innerHTML = `
-        🏆 Winner: ${winner.name} (Score: ${winner.score})
+        Winner: ${winner.name} (Score: ${winner.score})
     `;
 }
 
