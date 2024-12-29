@@ -4,45 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Virtual Worlds New Year Team Building</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="login-screen" class="screen">
-        <h1>Virtual Worlds New Year Team Building</h1>
-        <div class="login-form">
-            <input type="text" id="player-name" placeholder="Enter your name">
-            <button id="join-btn">Join Game</button>
+    <div class="container">
+        <div id="login-screen" class="screen">
+            <h1>Virtual Worlds New Year Team Building</h1>
+            <div class="login-form">
+                <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+                <button id="join-btn">Join Game</button>
+            </div>
         </div>
-    </div>
 
-    <div id="waiting-screen" class="screen hidden">
-        <h2>Waiting for Players</h2>
-        <div id="player-list"></div>
-        <p>Minimum players needed: 2</p>
-        <p>Maximum players allowed: 20</p>
-        <div id="host-controls" class="hidden">
-            <button id="start-game-btn" class="disabled">Start Game</button>
-            <p id="start-game-message">Waiting for more players...</p>
+        <div id="waiting-screen" class="screen hidden">
+            <h2>Waiting for Players</h2>
+            <div class="info-box">
+                <p>Minimum players needed: <span class="highlight">2</span></p>
+                <p>Maximum players allowed: <span class="highlight">20</span></p>
+            </div>
+            <div id="player-list" class="player-list"></div>
+            <div id="host-controls" class="hidden">
+                <button id="start-game-btn" class="disabled">Start Game</button>
+                <p id="start-game-message">Waiting for more players...</p>
+            </div>
         </div>
-    </div>
 
-    <div id="game-screen" class="screen hidden">
-        <div class="timer">Time: <span id="timer">10</span>s</div>
-        <div class="question-container">
-            <h3 id="question-text"></h3>
-            <div id="options-container"></div>
+        <div id="game-screen" class="screen hidden">
+            <h2>Question <span id="question-number"></span></h2>
+            <div id="timer" class="timer">10</div>
+            <div id="question-container" class="question-container">
+                <p id="question-text"></p>
+                <div id="options-container"></div>
+            </div>
         </div>
-        <div class="scoreboard">
-            <h4>Players</h4>
-            <div id="scoreboard-list"></div>
-        </div>
-    </div>
 
-    <div id="result-screen" class="screen hidden">
-        <h2>Game Over!</h2>
-        <div id="winner-display"></div>
-        <div id="final-scores"></div>
-        <button id="play-again-btn">Play Again</button>
+        <div id="scoreboard-screen" class="screen hidden">
+            <h2>Final Scores</h2>
+            <div class="scoreboard">
+                <div id="scoreboard-list"></div>
+            </div>
+            <button id="play-again-btn">Play Again</button>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

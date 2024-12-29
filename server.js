@@ -66,58 +66,60 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('answer', (data) => {
-        const room = rooms.get(data.roomId);
-        if (!room) return;
-
-        const player = room.players.find(p => p.id === socket.id);
-        if (!player) return;
-
-        // Mark player as answered to prevent multiple answers
-        if (player.answered) return;
-        player.answered = true;
-
-        const question = questions[room.currentQuestion];
-        const isCorrect = data.answer === question.correct;
-        
-        // Send immediate feedback to the player who answered
-        socket.emit('answerResult', {
-            selectedAnswer: data.answer,
-            correctAnswer: question.correct,
-            isCorrect: isCorrect
-        });
-
-        if (isCorrect) {
-            player.score += 1;
-        }
-
-        // Broadcast updated scores to all players
-        io.to(data.roomId).emit('scoreUpdate', {
-            players: room.players
-        });
-
-        const allAnswered = room.players.every(p => p.answered);
-        if (allAnswered) {
-            // Show correct answer to all players
-            io.to(data.roomId).emit('revealAnswer', {
-                correct: question.correct,
-                players: room.players
-            });
-
-            // Wait 2 seconds before next question
-            setTimeout(() => {
-                nextQuestion(data.roomId);
-            }, 2000);
-        }
-    });
-
-    // Add start game event handler
     socket.on('startGame', (roomId) => {
         const room = rooms.get(roomId);
         if (!room || room.hostId !== socket.id || room.players.length < 2) return;
 
         room.gameStarted = true;
-        startGame(roomId);
+        room.currentQuestion = 0;
+        io.to(roomId).emit('gameStart', { 
+            questions: questions,
+            currentQuestion: 0,
+            players: room.players
+        });
+    });
+
+    socket.on('answer', (data) => {
+        const room = rooms.get(data.roomId);
+        if (!room) return;
+
+        const player = room.players.find(p => p.id === socket.id);
+        if (!player || player.answered) return;
+
+        player.answered = true;
+        const question = questions[room.currentQuestion];
+        const isCorrect = data.answer === question.correct;
+
+        if (isCorrect) {
+            player.score += 1;
+        }
+
+        // Send immediate feedback to the player who answered
+        socket.emit('answerResult', {
+            selectedAnswer: data.answer,
+            correctAnswer: question.correct,
+            correct: isCorrect
+        });
+
+        // Check if all players have answered
+        const allAnswered = room.players.every(p => p.answered);
+        if (allAnswered) {
+            setTimeout(() => {
+                room.currentQuestion++;
+                if (room.currentQuestion < questions.length) {
+                    // Reset answered state for all players
+                    room.players.forEach(player => player.answered = false);
+                    io.to(data.roomId).emit('newQuestion', {
+                        currentQuestion: room.currentQuestion,
+                        players: room.players
+                    });
+                } else {
+                    io.to(data.roomId).emit('gameOver', {
+                        players: room.players.sort((a, b) => b.score - a.score)
+                    });
+                }
+            }, 2000); // Show correct answer for 2 seconds
+        }
     });
 
     // Handle disconnect
@@ -157,46 +159,6 @@ function findAvailableRoom() {
         }
     }
     return 'room-' + Date.now();
-}
-
-function startGame(roomId) {
-    const room = rooms.get(roomId);
-    room.gameStarted = true;
-    io.to(roomId).emit('gameStart', { 
-        question: questions[0],
-        players: room.players
-    });
-}
-
-function nextQuestion(roomId) {
-    const room = rooms.get(roomId);
-    room.currentQuestion++;
-    
-    // Reset answered state for all players
-    room.players.forEach(player => {
-        player.answered = false;
-    });
-    
-    if (room.currentQuestion < questions.length) {
-        io.to(roomId).emit('newQuestion', {
-            question: questions[room.currentQuestion],
-            players: room.players
-        });
-    } else {
-        endGame(roomId);
-    }
-}
-
-function endGame(roomId) {
-    const room = rooms.get(roomId);
-    const winner = room.players.reduce((prev, current) => 
-        (prev.score > current.score) ? prev : current
-    );
-    
-    io.to(roomId).emit('gameEnd', {
-        winner: winner,
-        players: room.players
-    });
 }
 
 const PORT = process.env.PORT || 3000;

@@ -1,13 +1,6 @@
 const socket = io();
 
 // DOM Elements
-const screens = {
-    login: document.getElementById('login-screen'),
-    waiting: document.getElementById('waiting-screen'),
-    game: document.getElementById('game-screen'),
-    result: document.getElementById('result-screen')
-};
-
 const playerNameInput = document.getElementById('player-name');
 const joinButton = document.getElementById('join-btn');
 const playerList = document.getElementById('player-list');
@@ -23,6 +16,9 @@ const hostControls = document.getElementById('host-controls');
 let currentRoom = null;
 let gameTimer = null;
 let isHost = false;
+let questions = [];
+let currentQuestion = 0;
+let totalQuestions = 0;
 
 // Event Listeners
 joinButton.addEventListener('click', () => {
@@ -33,7 +29,7 @@ joinButton.addEventListener('click', () => {
 });
 
 playAgainBtn.addEventListener('click', () => {
-    showScreen('login');
+    showScreen('login-screen');
     playerNameInput.value = '';
 });
 
@@ -54,7 +50,7 @@ socket.on('roomJoined', (data) => {
     
     updatePlayerList(data.players);
     updateStartButton(data.players.length, data.minPlayers);
-    showScreen('waiting');
+    showScreen('waiting-screen');
 });
 
 socket.on('playerJoined', (data) => {
@@ -75,83 +71,96 @@ socket.on('newHost', (data) => {
 });
 
 socket.on('gameStart', (data) => {
-    showScreen('game');
-    displayQuestion(data.question);
+    showScreen('game-screen');
+    questions = data.questions;
+    currentQuestion = data.currentQuestion;
+    totalQuestions = questions.length;
+    displayQuestion(questions[currentQuestion]);
     updateScoreboard(data.players);
     startTimer();
 });
 
 socket.on('newQuestion', (data) => {
-    displayQuestion(data.question);
+    currentQuestion = data.currentQuestion;
+    displayQuestion(questions[currentQuestion]);
     updateScoreboard(data.players);
     startTimer();
 });
 
-socket.on('gameEnd', (data) => {
-    clearInterval(gameTimer);
-    showScreen('result');
-    displayWinner(data.winner);
-    displayFinalScores(data.players);
+socket.on('answerResult', (data) => {
+    const options = optionsContainer.children;
+    const correctOption = options[data.correctAnswer];
+    const selectedOption = options[data.selectedAnswer];
+
+    if (data.correct) {
+        selectedOption.classList.add('correct');
+    } else {
+        selectedOption.classList.add('incorrect');
+        correctOption.classList.add('correct');
+    }
 });
 
-socket.on('scoreUpdate', (data) => {
+socket.on('gameOver', (data) => {
+    showScreen('scoreboard-screen');
     updateScoreboard(data.players);
 });
 
-socket.on('revealAnswer', (data) => {
-    const options = optionsContainer.children;
-    for (let i = 0; i < options.length; i++) {
-        if (i === data.correct) {
-            options[i].style.backgroundColor = '#4CAF50';
-        } else {
-            options[i].style.backgroundColor = '#ff4444';
-        }
-    }
-});
-
-socket.on('answerResult', (data) => {
-    const options = optionsContainer.children;
-    const selectedOption = options[data.selectedAnswer];
-    
-    if (data.isCorrect) {
-        selectedOption.style.backgroundColor = '#4CAF50'; // Green
-    } else {
-        selectedOption.style.backgroundColor = '#ff4444'; // Red
-        // Show the correct answer in green
-        options[data.correctAnswer].style.backgroundColor = '#4CAF50';
-    }
-});
-
 // Helper Functions
-function showScreen(screenName) {
-    Object.values(screens).forEach(screen => screen.classList.add('hidden'));
-    screens[screenName].classList.remove('hidden');
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.add('hidden');
+    });
+    document.getElementById(screenId).classList.remove('hidden');
 }
 
 function updatePlayerList(players) {
+    const playerList = document.getElementById('player-list');
     playerList.innerHTML = players
         .map(player => `
             <div class="player-item">
-                ${player.name} ${player.isHost ? '(Host)' : ''}
+                <span>${player.name}</span>
+                ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
             </div>
         `).join('');
 }
 
 function displayQuestion(question) {
-    questionText.textContent = question.question;
-    optionsContainer.innerHTML = question.options
-        .map((option, index) => `
-            <div class="option" onclick="submitAnswer(${index})">
-                ${option}
-            </div>
-        `).join('');
-    // Reset pointer-events to allow clicking
+    if (!question) return;
+    
+    document.getElementById('question-number').textContent = `${currentQuestion + 1}/${totalQuestions}`;
+    document.getElementById('question-text').textContent = question.question;
+    
+    const optionsContainer = document.getElementById('options-container');
+    optionsContainer.innerHTML = '';
     optionsContainer.style.pointerEvents = 'auto';
     
-    // Reset the background colors of options
+    question.options.forEach((option, index) => {
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'option';
+        optionDiv.textContent = option;
+        optionDiv.onclick = () => {
+            if (!optionDiv.classList.contains('disabled')) {
+                selectAnswer(index);
+                disableOptions();
+            }
+        };
+        optionsContainer.appendChild(optionDiv);
+    });
+}
+
+function selectAnswer(answerIndex) {
+    socket.emit('answer', {
+        roomId: currentRoom,
+        answer: answerIndex
+    });
+}
+
+function disableOptions() {
+    const optionsContainer = document.getElementById('options-container');
+    optionsContainer.style.pointerEvents = 'none';
     const options = optionsContainer.children;
-    for (let i = 0; i < options.length; i++) {
-        options[i].style.backgroundColor = '';
+    for (let option of options) {
+        option.classList.add('disabled');
     }
 }
 
@@ -159,49 +168,38 @@ function startTimer() {
     let timeLeft = 10;
     clearInterval(gameTimer);
     
-    timerDisplay.textContent = timeLeft;
+    updateTimer(timeLeft);
     gameTimer = setInterval(() => {
         timeLeft--;
-        timerDisplay.textContent = timeLeft;
+        updateTimer(timeLeft);
         
         if (timeLeft <= 0) {
             clearInterval(gameTimer);
-            submitAnswer(-1); // Submit no answer
+            disableOptions();
         }
     }, 1000);
 }
 
-function submitAnswer(answerIndex) {
-    clearInterval(gameTimer);
+function updateTimer(time) {
+    const timerElement = document.getElementById('timer');
+    timerElement.textContent = time;
     
-    // Get the current question from the question text
-    const currentQuestion = questionText.textContent;
-    
-    // Immediately show the selected answer's result
-    const options = optionsContainer.children;
-    const selectedOption = options[answerIndex];
-    
-    // Add visual feedback classes
-    for (let i = 0; i < options.length; i++) {
-        if (i === answerIndex) {
-            selectedOption.classList.add('selected');
-        }
-        options[i].classList.add('disabled');
+    if (time <= 3) {
+        timerElement.classList.add('warning');
+    } else {
+        timerElement.classList.remove('warning');
     }
-    
-    socket.emit('answer', {
-        roomId: currentRoom,
-        answer: answerIndex
-    });
-    optionsContainer.style.pointerEvents = 'none';
 }
 
 function updateScoreboard(players) {
-    scoreboardList.innerHTML = players
-        .map(player => `
+    const scoreboardList = document.getElementById('scoreboard-list');
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+    
+    scoreboardList.innerHTML = sortedPlayers
+        .map((player, index) => `
             <div class="player-score">
-                <span>${player.name}</span>
-                <span>${player.score}</span>
+                <span>${index + 1}. ${player.name}</span>
+                <span class="score">${player.score} points</span>
             </div>
         `).join('');
 }
