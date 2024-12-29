@@ -74,7 +74,8 @@ io.on('connection', (socket) => {
         players.set(socket.id, {
             name: playerName,
             score: 0,
-            answered: false
+            answered: false,
+            isHost: !gameHost // First player becomes host
         });
 
         // First player becomes the host
@@ -82,10 +83,25 @@ io.on('connection', (socket) => {
             gameHost = socket.id;
         }
 
+        const playersList = Array.from(players.values()).map((player, index) => ({
+            ...player,
+            isHost: players.get(Array.from(players.keys())[index]) === players.get(gameHost)
+        }));
+
+        // Broadcast to all players
         io.emit('playerJoined', {
-            players: Array.from(players.values()),
-            isHost: socket.id === gameHost
+            players: playersList,
+            playerCount: players.size
         });
+
+        // Send specific message to host
+        if (gameHost) {
+            io.to(gameHost).emit('updateStartButton', {
+                playerCount: players.size,
+                minPlayers: 2,
+                isHost: true
+            });
+        }
     });
 
     socket.on('startGame', () => {
@@ -146,10 +162,36 @@ io.on('connection', (socket) => {
                 // If host left but other players remain, assign new host
                 const remainingPlayers = Array.from(players.keys());
                 gameHost = remainingPlayers[0];
-                io.to(gameHost).emit('youAreHost');
+                
+                // Update player's host status
+                players.get(gameHost).isHost = true;
+                
+                // Notify new host
+                io.to(gameHost).emit('youAreHost', {
+                    playerCount: players.size,
+                    minPlayers: 2
+                });
             }
+
+            const playersList = Array.from(players.values()).map((player, index) => ({
+                ...player,
+                isHost: players.get(Array.from(players.keys())[index]) === players.get(gameHost)
+            }));
             
-            io.emit('playerLeft', Array.from(players.values()));
+            // Update all clients
+            io.emit('playerLeft', {
+                players: playersList,
+                playerCount: players.size
+            });
+
+            // Update host's start button
+            if (gameHost) {
+                io.to(gameHost).emit('updateStartButton', {
+                    playerCount: players.size,
+                    minPlayers: 2,
+                    isHost: true
+                });
+            }
         }
     });
 });

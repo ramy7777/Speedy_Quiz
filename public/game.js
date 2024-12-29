@@ -52,15 +52,8 @@ socket.on('gameFull', () => {
 });
 
 socket.on('playerJoined', (data) => {
-    isHost = data.isHost;
-    
-    if (isHost) {
-        hostControls.classList.remove('hidden');
-        startGameBtn.classList.remove('disabled');
-        startGameMessage.textContent = 'Click Start Game when ready!';
-    }
-    
     updatePlayerList(data.players);
+    updateStartMessage(data.playerCount);
 });
 
 socket.on('gameStart', (data) => {
@@ -94,15 +87,15 @@ socket.on('gameOver', (players) => {
     soundManager.playGameOver();
 });
 
-socket.on('playerLeft', (players) => {
-    updatePlayerList(players);
+socket.on('playerLeft', (data) => {
+    updatePlayerList(data.players);
+    updateStartMessage(data.playerCount);
 });
 
-socket.on('youAreHost', () => {
+socket.on('youAreHost', (data) => {
     isHost = true;
     hostControls.classList.remove('hidden');
-    startGameBtn.classList.remove('disabled');
-    startGameMessage.textContent = 'Click Start Game when ready!';
+    updateStartMessage(data.playerCount, data.minPlayers);
 });
 
 socket.on('answerResult', (data) => {
@@ -120,6 +113,14 @@ socket.on('answerResult', (data) => {
     }
 });
 
+socket.on('updateStartButton', (data) => {
+    isHost = data.isHost;
+    if (isHost) {
+        hostControls.classList.remove('hidden');
+    }
+    updateStartMessage(data.playerCount, data.minPlayers);
+});
+
 // Helper Functions
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {
@@ -133,7 +134,12 @@ function updatePlayerList(players) {
     players.forEach(player => {
         const playerElement = document.createElement('div');
         playerElement.classList.add('player-item');
-        playerElement.textContent = player.name + (player.isHost ? ' (Host)' : '');
+        if (player.isHost) {
+            playerElement.classList.add('host');
+            playerElement.textContent = `${player.name} (Host)`;
+        } else {
+            playerElement.textContent = player.name;
+        }
         playerList.appendChild(playerElement);
     });
 }
@@ -198,6 +204,18 @@ function displayFinalScores(players) {
         scoreItem.textContent = `${player.name}: ${player.score}`;
         scoreboardList.appendChild(scoreItem);
     });
+}
+
+function updateStartMessage(playerCount, minPlayers = 2) {
+    if (!isHost) return;
+
+    if (playerCount >= minPlayers) {
+        startGameBtn.classList.remove('disabled');
+        startGameMessage.textContent = 'Click Start Game when ready!';
+    } else {
+        startGameBtn.classList.add('disabled');
+        startGameMessage.textContent = `Waiting for more players... (${playerCount}/${minPlayers})`;
+    }
 }
 
 // Snowfall effect
