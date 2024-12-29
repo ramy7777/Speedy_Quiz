@@ -1,279 +1,153 @@
 const express = require('express');
 const app = express();
-const http = require('http').createServer(app);
+const http = require('http').Server(app);
 const io = require('socket.io')(http);
+const allQuestions = require('./questions');
 
 app.use(express.static('public'));
 
-const rooms = new Map();
-const questions = [
-    {
-        question: "What is the capital of France?",
-        options: ["London", "Berlin", "Paris", "Madrid"],
-        correct: 2
-    },
-    {
-        question: "Which planet is known as the Red Planet?",
-        options: ["Venus", "Mars", "Jupiter", "Saturn"],
-        correct: 1
-    },
-    {
-        question: "In which city does the most famous New Year's Eve ball drop take place?",
-        options: ["Chicago", "Los Angeles", "New York City", "Las Vegas"],
-        correct: 2
-    },
-    {
-        question: "What is the traditional New Year song in English-speaking countries?",
-        options: ["Happy Birthday", "Auld Lang Syne", "Jingle Bells", "We Wish You a Merry Christmas"],
-        correct: 1
-    },
-    {
-        question: "Which country celebrates New Year first due to its location?",
-        options: ["Japan", "Australia", "New Zealand", "Kiribati"],
-        correct: 3
-    },
-    {
-        question: "What is the traditional Spanish New Year custom of eating at midnight?",
-        options: ["12 Grapes", "12 Chocolates", "12 Nuts", "12 Cookies"],
-        correct: 0
-    },
-    {
-        question: "In which year did Times Square first host its New Year's Eve celebration?",
-        options: ["1904", "1924", "1934", "1944"],
-        correct: 0
-    },
-    {
-        question: "What color are you supposed to wear in Brazil on New Year's Eve for good luck?",
-        options: ["Red", "Green", "White", "Blue"],
-        correct: 2
-    },
-    {
-        question: "Which ancient civilization is credited with starting the tradition of New Year's resolutions?",
-        options: ["Greeks", "Romans", "Babylonians", "Egyptians"],
-        correct: 2
-    },
-    {
-        question: "What do Japanese people eat on New Year's Eve for good luck?",
-        options: ["Sushi", "Tempura", "Soba Noodles", "Miso Soup"],
-        correct: 2
-    },
-    {
-        question: "Which city hosts the world's largest New Year fireworks display?",
-        options: ["Sydney", "Dubai", "Hong Kong", "London"],
-        correct: 1
-    },
-    {
-        question: "What percentage of New Year's resolutions fail by February?",
-        options: ["40%", "60%", "80%", "95%"],
-        correct: 2
+const players = new Map();
+let gameInProgress = false;
+let currentQuestion = 0;
+let questions = [];
+let answerTimeout;
+let gameHost = null;
+
+function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-];
+    return shuffled;
+}
+
+function getRandomQuestions(count) {
+    return shuffleArray(allQuestions).slice(0, count);
+}
 
 io.on('connection', (socket) => {
     console.log('A user connected');
 
     socket.on('joinGame', (playerName) => {
-        let roomId = findAvailableRoom();
-        socket.join(roomId);
-        
-        if (!rooms.has(roomId)) {
-            rooms.set(roomId, {
-                players: [],
-                currentQuestion: 0,
-                gameStarted: false,
-                hostId: socket.id // First player becomes the host
-            });
+        if (gameInProgress) {
+            socket.emit('gameFull');
+            return;
         }
 
-        const room = rooms.get(roomId);
-        room.players.push({
-            id: socket.id,
+        if (players.size >= 20) {
+            socket.emit('gameFull');
+            return;
+        }
+
+        players.set(socket.id, {
             name: playerName,
             score: 0,
-            answered: false,
-            isHost: room.players.length === 0 // First player is the host
+            answered: false
         });
 
-        // Emit room joined event with host status
-        socket.emit('roomJoined', { 
-            roomId, 
-            players: room.players,
-            isHost: room.players.length === 1,
-            minPlayers: 2,
-            maxPlayers: 20
-        });
-        
-        // Broadcast to other players
-        socket.to(roomId).emit('playerJoined', { 
-            players: room.players
-        });
-
-        // Changed from 6 to 2 players for testing
-        if (room.players.length >= 2) {
-            // Do not start game automatically
-            // startGame(roomId);
-        }
-    });
-
-    socket.on('startGame', (roomId) => {
-        const room = rooms.get(roomId);
-        if (!room || room.hostId !== socket.id || room.players.length < 2) return;
-
-        room.gameStarted = true;
-        room.currentQuestion = 0;
-        room.questionTimer = null; // Initialize timer reference
-        
-        io.to(roomId).emit('gameStart', { 
-            questions: questions,
-            currentQuestion: 0,
-            players: room.players
-        });
-        startQuestionTimer(roomId);
-    });
-
-    socket.on('answer', (data) => {
-        const room = rooms.get(data.roomId);
-        if (!room) return;
-
-        const player = room.players.find(p => p.id === socket.id);
-        if (!player || player.answered) return;
-
-        player.answered = true;
-        const question = questions[room.currentQuestion];
-        const isCorrect = data.answer === question.correct;
-
-        if (isCorrect) {
-            player.score += 1;
+        // First player becomes the host
+        if (!gameHost) {
+            gameHost = socket.id;
         }
 
-        // Send immediate feedback to the player who answered
-        socket.emit('answerResult', {
-            selectedAnswer: data.answer,
-            correctAnswer: question.correct,
-            correct: isCorrect
+        io.emit('playerJoined', {
+            players: Array.from(players.values()),
+            isHost: socket.id === gameHost
         });
-
-        // Check if all players have answered
-        const allAnswered = room.players.every(p => p.answered);
-        if (allAnswered) {
-            if (room.questionTimer) {
-                clearTimeout(room.questionTimer);
-                room.questionTimer = null;
-            }
-            moveToNextQuestion(data.roomId);  
-        }
     });
 
-    socket.on('timeoutAnswer', (data) => {
-        const room = rooms.get(data.roomId);
-        if (!room) return;
-
-        const player = room.players.find(p => p.id === socket.id);
-        if (!player || player.answered) return;
-
-        player.answered = true;
-        
-        // For timeout, don't send back any answer result
-        socket.emit('answerResult', {
-            selectedAnswer: null,
-            correctAnswer: null,
-            correct: false
-        });
-
-        // Check if all players have answered
-        const allAnswered = room.players.every(p => p.answered);
-        if (allAnswered) {
-            if (room.questionTimer) {
-                clearTimeout(room.questionTimer);
-                room.questionTimer = null;
-            }
-            moveToNextQuestion(data.roomId);  
-        }
-    });
-
-    function moveToNextQuestion(roomId) {
-        const room = rooms.get(roomId);
-        if (!room) return;
-
-        setTimeout(() => {
-            room.currentQuestion++;
-            if (room.currentQuestion < questions.length) {
-                // Reset answered state for all players
-                room.players.forEach(player => player.answered = false);
-                io.to(roomId).emit('newQuestion', {
-                    currentQuestion: room.currentQuestion,
-                    players: room.players
-                });
-                startQuestionTimer(roomId);
-            } else {
-                io.to(roomId).emit('gameOver', {
-                    players: room.players.sort((a, b) => b.score - a.score)
-                });
-            }
-        }, 1000);
-    }
-
-    // Add timeout for each question
-    function startQuestionTimer(roomId) {
-        const room = rooms.get(roomId);
-        if (!room) return;
-
-        // Store the timer in the room object so we can clear it if needed
-        room.questionTimer = setTimeout(() => {
-            const unansweredPlayers = room.players.filter(p => !p.answered);
-            unansweredPlayers.forEach(player => {
-                player.answered = true;
-                io.to(player.id).emit('answerResult', {
-                    selectedAnswer: null,
-                    correctAnswer: null,
-                    correct: false
-                });
+    socket.on('startGame', () => {
+        if (socket.id === gameHost && !gameInProgress && players.size > 0) {
+            gameInProgress = true;
+            currentQuestion = 0;
+            // Get 20 random questions when the game starts
+            questions = getRandomQuestions(20);
+            
+            io.emit('gameStart', {
+                question: questions[0], // Send only the first question
+                currentQuestion: 0,
+                totalQuestions: questions.length,
+                players: Array.from(players.values())
             });
+            startAnswerTimeout();
+        }
+    });
 
-            moveToNextQuestion(roomId);
-        }, 10000); // Full 10 seconds timeout
-    }
-
-    // Handle disconnect
-    socket.on('disconnect', () => {
-        for (const [roomId, room] of rooms) {
-            const playerIndex = room.players.findIndex(p => p.id === socket.id);
-            if (playerIndex !== -1) {
-                room.players.splice(playerIndex, 1);
-                
-                // If host disconnects, assign new host
-                if (room.hostId === socket.id && room.players.length > 0) {
-                    room.hostId = room.players[0].id;
-                    room.players[0].isHost = true;
-                    io.to(roomId).emit('newHost', { 
-                        hostId: room.players[0].id 
-                    });
-                }
-
-                io.to(roomId).emit('playerLeft', { 
-                    players: room.players 
-                });
-
-                // If room is empty, remove it
-                if (room.players.length === 0) {
-                    rooms.delete(roomId);
-                }
-                break;
+    socket.on('submitAnswer', (answer) => {
+        const player = players.get(socket.id);
+        if (player && !player.answered && gameInProgress) {
+            player.answered = true;
+            if (answer === questions[currentQuestion].correct) {
+                player.score += 100;
             }
+            io.emit('updateScores', Array.from(players.values()));
+
+            // Check if all players have answered
+            const allAnswered = Array.from(players.values()).every(p => p.answered);
+            if (allAnswered) {
+                clearTimeout(answerTimeout);
+                moveToNextQuestion();
+            }
+        }
+    });
+
+    socket.on('disconnect', () => {
+        if (players.has(socket.id)) {
+            players.delete(socket.id);
+            if (socket.id === gameHost) {
+                const remainingPlayers = Array.from(players.keys());
+                if (remainingPlayers.length > 0) {
+                    gameHost = remainingPlayers[0];
+                    io.to(gameHost).emit('youAreHost');
+                } else {
+                    gameHost = null;
+                }
+            }
+            io.emit('playerLeft', Array.from(players.values()));
         }
     });
 });
 
-function findAvailableRoom() {
-    for (const [roomId, room] of rooms) {
-        if (room.players.length < 20 && !room.gameStarted) {
-            return roomId;
+function startAnswerTimeout() {
+    clearTimeout(answerTimeout);
+    answerTimeout = setTimeout(moveToNextQuestion, 10000);
+}
+
+function moveToNextQuestion() {
+    currentQuestion++;
+    
+    // Reset answered status for all players
+    for (let player of players.values()) {
+        player.answered = false;
+    }
+
+    if (currentQuestion < questions.length) {
+        io.emit('newQuestion', {
+            question: questions[currentQuestion],
+            currentQuestion: currentQuestion,
+            players: Array.from(players.values())
+        });
+        startAnswerTimeout();
+    } else {
+        // Game is over
+        gameInProgress = false;
+        io.emit('gameOver', Array.from(players.values()));
+        
+        // Reset game state
+        currentQuestion = 0;
+        questions = [];
+        gameHost = null;
+        
+        // Reset player scores
+        for (let player of players.values()) {
+            player.score = 0;
+            player.answered = false;
         }
     }
-    return 'room-' + Date.now();
 }
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log(`Imad & Doaa New Year's Party Game server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });

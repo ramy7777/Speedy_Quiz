@@ -12,19 +12,17 @@ const playAgainBtn = document.getElementById('play-again-btn');
 const startGameBtn = document.getElementById('start-game-btn');
 const startGameMessage = document.getElementById('start-game-message');
 const hostControls = document.getElementById('host-controls');
+const questionNumber = document.getElementById('question-number');
 
-let currentRoom = null;
-let gameTimer = null;
 let isHost = false;
-let questions = [];
 let currentQuestionNumber = 0;
-let totalQuestions = 0;
 
 // Event Listeners
 joinButton.addEventListener('click', () => {
     const playerName = playerNameInput.value.trim();
     if (playerName) {
         socket.emit('joinGame', playerName);
+        showScreen('waiting-screen');
     }
 });
 
@@ -35,98 +33,61 @@ playAgainBtn.addEventListener('click', () => {
 
 startGameBtn.addEventListener('click', () => {
     if (!startGameBtn.classList.contains('disabled')) {
-        socket.emit('startGame', currentRoom);
+        socket.emit('startGame');
     }
 });
 
 // Socket Events
-socket.on('roomJoined', (data) => {
-    currentRoom = data.roomId;
+socket.on('gameFull', () => {
+    alert('Game is full or already in progress!');
+});
+
+socket.on('playerJoined', (data) => {
     isHost = data.isHost;
     
     if (isHost) {
         hostControls.classList.remove('hidden');
+        startGameBtn.classList.remove('disabled');
+        startGameMessage.textContent = 'Click Start Game when ready!';
     }
     
     updatePlayerList(data.players);
-    updateStartButton(data.players.length, data.minPlayers);
-    showScreen('waiting-screen');
-});
-
-socket.on('playerJoined', (data) => {
-    updatePlayerList(data.players);
-    updateStartButton(data.players.length, 2);
-});
-
-socket.on('playerLeft', (data) => {
-    updatePlayerList(data.players);
-    updateStartButton(data.players.length, 2);
-});
-
-socket.on('newHost', (data) => {
-    if (socket.id === data.hostId) {
-        isHost = true;
-        hostControls.classList.remove('hidden');
-    }
 });
 
 socket.on('gameStart', (data) => {
     showScreen('game-screen');
-    questions = data.questions;
-    currentQuestionNumber = data.currentQuestion;
-    totalQuestions = questions.length;
-    displayQuestion(questions[currentQuestionNumber]);
+    currentQuestionNumber = data.currentQuestion + 1;
+    questionNumber.textContent = currentQuestionNumber + '/' + data.totalQuestions;
+    displayQuestion(data.question);
     updateScoreboard(data.players);
-    startTimer();
     startSnowfall();
 });
 
 socket.on('newQuestion', (data) => {
-    clearInterval(gameTimer);
-    currentQuestionNumber = data.currentQuestion;
-    document.getElementById('question-number').textContent = `${currentQuestionNumber + 1}/${questions.length}`;
-    
-    const questionData = questions[currentQuestionNumber];
-    questionText.textContent = questionData.question;
-    
-    // Clear previous options and their styles
-    optionsContainer.innerHTML = '';
-    questionData.options.forEach((option, index) => {
-        const button = document.createElement('div');
-        button.textContent = option;
-        button.className = 'option';
-        button.onclick = () => {
-            if (!button.classList.contains('disabled')) {
-                selectAnswer(index);
-                disableOptions();
-            }
-        };
-        optionsContainer.appendChild(button);
-    });
-    
-    startTimer();
+    currentQuestionNumber = data.currentQuestion + 1;
+    questionNumber.textContent = currentQuestionNumber + '/20';
+    displayQuestion(data.question);
     updateScoreboard(data.players);
 });
 
-socket.on('answerResult', (data) => {
-    const options = optionsContainer.children;
-    
-    // Only show results if the player actually answered
-    if (data.selectedAnswer !== null) {
-        const correctOption = options[data.correctAnswer];
-        const selectedOption = options[data.selectedAnswer];
-        if (data.correct) {
-            selectedOption.classList.add('correct');
-        } else {
-            selectedOption.classList.add('incorrect');
-            correctOption.classList.add('correct');
-        }
-    }
+socket.on('updateScores', (players) => {
+    updateScoreboard(players);
 });
 
-socket.on('gameOver', (data) => {
+socket.on('gameOver', (players) => {
     showScreen('scoreboard-screen');
-    updateScoreboard(data.players);
+    displayFinalScores(players);
+});
+
+socket.on('playerLeft', (players) => {
+    updatePlayerList(players);
+});
+
+socket.on('youAreHost', () => {
+    isHost = true;
+    hostControls.classList.remove('hidden');
+    startGameBtn.classList.remove('disabled');
+    startGameMessage.textContent = 'Click Start Game when ready!';
 });
 
 // Helper Functions
@@ -138,49 +99,37 @@ function showScreen(screenId) {
 }
 
 function updatePlayerList(players) {
-    const playerList = document.getElementById('player-list');
-    playerList.innerHTML = players
-        .map(player => `
-            <div class="player-item">
-                <span>${player.name}</span>
-                ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
-            </div>
-        `).join('');
+    playerList.innerHTML = '';
+    players.forEach(player => {
+        const playerElement = document.createElement('div');
+        playerElement.classList.add('player-item');
+        playerElement.textContent = player.name + (player.isHost ? ' (Host)' : '');
+        playerList.appendChild(playerElement);
+    });
 }
 
 function displayQuestion(question) {
-    if (!question) return;
-    
-    document.getElementById('question-number').textContent = `${currentQuestionNumber + 1}/${totalQuestions}`;
-    document.getElementById('question-text').textContent = question.question;
-    
-    const optionsContainer = document.getElementById('options-container');
+    questionText.textContent = question.question;
     optionsContainer.innerHTML = '';
-    optionsContainer.style.pointerEvents = 'auto';
     
     question.options.forEach((option, index) => {
-        const optionDiv = document.createElement('div');
-        optionDiv.className = 'option';
-        optionDiv.textContent = option;
-        optionDiv.onclick = () => {
-            if (!optionDiv.classList.contains('disabled')) {
-                selectAnswer(index);
-                disableOptions();
-            }
-        };
-        optionsContainer.appendChild(optionDiv);
+        const button = document.createElement('button');
+        button.classList.add('option');
+        button.textContent = option;
+        button.onclick = () => selectAnswer(index);
+        optionsContainer.appendChild(button);
     });
+    
+    startTimer();
 }
 
 function selectAnswer(index) {
-    socket.emit('answer', {
-        roomId: currentRoom,
-        answer: index
-    });
+    socket.emit('submitAnswer', index);
+    disableOptions();
 }
 
 function disableOptions() {
-    const options = optionsContainer.children;
+    const options = optionsContainer.getElementsByClassName('option');
     for (let option of options) {
         option.classList.add('disabled');
     }
@@ -188,74 +137,49 @@ function disableOptions() {
 
 function startTimer() {
     let timeLeft = 10;
-    clearInterval(gameTimer);
-    
     updateTimer(timeLeft);
-    gameTimer = setInterval(() => {
+    
+    const timer = setInterval(() => {
         timeLeft--;
         updateTimer(timeLeft);
         
         if (timeLeft <= 0) {
-            clearInterval(gameTimer);
+            clearInterval(timer);
             disableOptions();
-            socket.emit('timeoutAnswer', {
-                roomId: currentRoom
-            });
         }
     }, 1000);
 }
 
 function updateTimer(time) {
-    const timerElement = document.getElementById('timer');
-    timerElement.textContent = time;
-    
-    if (time <= 3) {
-        timerElement.classList.add('warning');
-    } else {
-        timerElement.classList.remove('warning');
-    }
+    if (time < 0) time = 0;
+    const color = time <= 3 ? 'red' : 'white';
+    timerDisplay.style.color = color;
+    timerDisplay.textContent = time;
 }
 
 function updateScoreboard(players) {
-    const scoreboardList = document.getElementById('scoreboard-list');
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+    scoreboardList.innerHTML = '';
     
-    scoreboardList.innerHTML = sortedPlayers
-        .map((player, index) => `
-            <div class="player-score">
-                <span>${index + 1}. ${player.name}</span>
-                <span class="score">${player.score} points</span>
-            </div>
-        `).join('');
-}
-
-function displayWinner(winner) {
-    document.getElementById('winner-display').innerHTML = `
-        Winner: ${winner.name} (Score: ${winner.score})
-    `;
+    sortedPlayers.forEach(player => {
+        const scoreItem = document.createElement('div');
+        scoreItem.classList.add('score-item');
+        scoreItem.textContent = `${player.name}: ${player.score}`;
+        scoreboardList.appendChild(scoreItem);
+    });
 }
 
 function displayFinalScores(players) {
-    document.getElementById('final-scores').innerHTML = players
-        .sort((a, b) => b.score - a.score)
-        .map(player => `
-            <div class="player-score">
-                <span>${player.name}</span>
-                <span>${player.score}</span>
-            </div>
-        `).join('');
-}
-
-function updateStartButton(playerCount, minPlayers) {
-    if (isHost) {
-        if (playerCount >= minPlayers) {
-            startGameBtn.classList.remove('disabled');
-            startGameMessage.textContent = 'Click to start the game!';
-        } else {
-            startGameBtn.classList.add('disabled');
-            startGameMessage.textContent = `Waiting for more players... (${playerCount}/${minPlayers})`;
-        }
-    }
+    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+    scoreboardList.innerHTML = '';
+    
+    sortedPlayers.forEach((player, index) => {
+        const scoreItem = document.createElement('div');
+        scoreItem.classList.add('score-item');
+        if (index === 0) scoreItem.classList.add('winner');
+        scoreItem.textContent = `${player.name}: ${player.score}`;
+        scoreboardList.appendChild(scoreItem);
+    });
 }
 
 // Snowfall effect
