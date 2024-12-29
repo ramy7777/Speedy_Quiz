@@ -121,6 +121,8 @@ io.on('connection', (socket) => {
 
         room.gameStarted = true;
         room.currentQuestion = 0;
+        room.questionTimer = null; // Initialize timer reference
+        
         io.to(roomId).emit('gameStart', { 
             questions: questions,
             currentQuestion: 0,
@@ -151,7 +153,15 @@ io.on('connection', (socket) => {
             correct: isCorrect
         });
 
-        checkAllAnswered(data.roomId);
+        // Check if all players have answered
+        const allAnswered = room.players.every(p => p.answered);
+        if (allAnswered) {
+            if (room.questionTimer) {
+                clearTimeout(room.questionTimer);
+                room.questionTimer = null;
+            }
+            moveToNextQuestion(data.roomId);  
+        }
     });
 
     socket.on('timeoutAnswer', (data) => {
@@ -170,34 +180,37 @@ io.on('connection', (socket) => {
             correct: false
         });
 
-        checkAllAnswered(data.roomId);
-    });
-
-    function checkAllAnswered(roomId) {
-        const room = rooms.get(roomId);
-        if (!room) return;
-
         // Check if all players have answered
         const allAnswered = room.players.every(p => p.answered);
         if (allAnswered) {
-            // Shorter delay since we're not showing correct answer
-            setTimeout(() => {
-                room.currentQuestion++;
-                if (room.currentQuestion < questions.length) {
-                    // Reset answered state for all players
-                    room.players.forEach(player => player.answered = false);
-                    io.to(roomId).emit('newQuestion', {
-                        currentQuestion: room.currentQuestion,
-                        players: room.players
-                    });
-                    startQuestionTimer(roomId);
-                } else {
-                    io.to(roomId).emit('gameOver', {
-                        players: room.players.sort((a, b) => b.score - a.score)
-                    });
-                }
-            }, 1000); // Reduced from 2000ms to 1000ms
+            if (room.questionTimer) {
+                clearTimeout(room.questionTimer);
+                room.questionTimer = null;
+            }
+            moveToNextQuestion(data.roomId);  
         }
+    });
+
+    function moveToNextQuestion(roomId) {
+        const room = rooms.get(roomId);
+        if (!room) return;
+
+        setTimeout(() => {
+            room.currentQuestion++;
+            if (room.currentQuestion < questions.length) {
+                // Reset answered state for all players
+                room.players.forEach(player => player.answered = false);
+                io.to(roomId).emit('newQuestion', {
+                    currentQuestion: room.currentQuestion,
+                    players: room.players
+                });
+                startQuestionTimer(roomId);
+            } else {
+                io.to(roomId).emit('gameOver', {
+                    players: room.players.sort((a, b) => b.score - a.score)
+                });
+            }
+        }, 1000);
     }
 
     // Add timeout for each question
@@ -205,11 +218,11 @@ io.on('connection', (socket) => {
         const room = rooms.get(roomId);
         if (!room) return;
 
-        setTimeout(() => {
+        // Store the timer in the room object so we can clear it if needed
+        room.questionTimer = setTimeout(() => {
             const unansweredPlayers = room.players.filter(p => !p.answered);
             unansweredPlayers.forEach(player => {
                 player.answered = true;
-                // Don't send answer result for timeouts
                 io.to(player.id).emit('answerResult', {
                     selectedAnswer: null,
                     correctAnswer: null,
@@ -217,8 +230,8 @@ io.on('connection', (socket) => {
                 });
             });
 
-            checkAllAnswered(roomId);
-        }, 10000); // 10 seconds timeout
+            moveToNextQuestion(roomId);
+        }, 10000); // Full 10 seconds timeout
     }
 
     // Handle disconnect

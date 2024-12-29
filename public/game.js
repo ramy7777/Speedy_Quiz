@@ -17,7 +17,7 @@ let currentRoom = null;
 let gameTimer = null;
 let isHost = false;
 let questions = [];
-let currentQuestion = 0;
+let currentQuestionNumber = 0;
 let totalQuestions = 0;
 
 // Event Listeners
@@ -73,18 +73,38 @@ socket.on('newHost', (data) => {
 socket.on('gameStart', (data) => {
     showScreen('game-screen');
     questions = data.questions;
-    currentQuestion = data.currentQuestion;
+    currentQuestionNumber = data.currentQuestion;
     totalQuestions = questions.length;
-    displayQuestion(questions[currentQuestion]);
+    displayQuestion(questions[currentQuestionNumber]);
     updateScoreboard(data.players);
     startTimer();
 });
 
 socket.on('newQuestion', (data) => {
-    currentQuestion = data.currentQuestion;
-    displayQuestion(questions[currentQuestion]);
-    updateScoreboard(data.players);
+    clearInterval(gameTimer);
+    currentQuestionNumber = data.currentQuestion;
+    document.getElementById('question-number').textContent = `${currentQuestionNumber + 1}/${questions.length}`;
+    
+    const questionData = questions[currentQuestionNumber];
+    questionText.textContent = questionData.question;
+    
+    // Clear previous options and their styles
+    optionsContainer.innerHTML = '';
+    questionData.options.forEach((option, index) => {
+        const button = document.createElement('div');
+        button.textContent = option;
+        button.className = 'option';
+        button.onclick = () => {
+            if (!button.classList.contains('disabled')) {
+                selectAnswer(index);
+                disableOptions();
+            }
+        };
+        optionsContainer.appendChild(button);
+    });
+    
     startTimer();
+    updateScoreboard(data.players);
 });
 
 socket.on('answerResult', (data) => {
@@ -101,7 +121,6 @@ socket.on('answerResult', (data) => {
             correctOption.classList.add('correct');
         }
     }
-    // For timeouts, don't show any feedback
 });
 
 socket.on('gameOver', (data) => {
@@ -131,7 +150,7 @@ function updatePlayerList(players) {
 function displayQuestion(question) {
     if (!question) return;
     
-    document.getElementById('question-number').textContent = `${currentQuestion + 1}/${totalQuestions}`;
+    document.getElementById('question-number').textContent = `${currentQuestionNumber + 1}/${totalQuestions}`;
     document.getElementById('question-text').textContent = question.question;
     
     const optionsContainer = document.getElementById('options-container');
@@ -152,16 +171,14 @@ function displayQuestion(question) {
     });
 }
 
-function selectAnswer(answerIndex) {
+function selectAnswer(index) {
     socket.emit('answer', {
         roomId: currentRoom,
-        answer: answerIndex
+        answer: index
     });
 }
 
 function disableOptions() {
-    const optionsContainer = document.getElementById('options-container');
-    optionsContainer.style.pointerEvents = 'none';
     const options = optionsContainer.children;
     for (let option of options) {
         option.classList.add('disabled');
@@ -180,7 +197,6 @@ function startTimer() {
         if (timeLeft <= 0) {
             clearInterval(gameTimer);
             disableOptions();
-            // Just notify server about timeout without showing correct answer
             socket.emit('timeoutAnswer', {
                 roomId: currentRoom
             });
