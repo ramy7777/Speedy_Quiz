@@ -79,6 +79,19 @@ socket.on('revealAnswer', (data) => {
     }
 });
 
+socket.on('answerResult', (data) => {
+    const options = optionsContainer.children;
+    const selectedOption = options[data.selectedAnswer];
+    
+    if (data.isCorrect) {
+        selectedOption.style.backgroundColor = '#4CAF50'; // Green
+    } else {
+        selectedOption.style.backgroundColor = '#ff4444'; // Red
+        // Show the correct answer in green
+        options[data.correctAnswer].style.backgroundColor = '#4CAF50';
+    }
+});
+
 // Helper Functions
 function showScreen(screenName) {
     Object.values(screens).forEach(screen => screen.classList.add('hidden'));
@@ -127,6 +140,22 @@ function startTimer() {
 
 function submitAnswer(answerIndex) {
     clearInterval(gameTimer);
+    
+    // Get the current question from the question text
+    const currentQuestion = questionText.textContent;
+    
+    // Immediately show the selected answer's result
+    const options = optionsContainer.children;
+    const selectedOption = options[answerIndex];
+    
+    // Add visual feedback classes
+    for (let i = 0; i < options.length; i++) {
+        if (i === answerIndex) {
+            selectedOption.classList.add('selected');
+        }
+        options[i].classList.add('disabled');
+    }
+    
     socket.emit('answer', {
         roomId: currentRoom,
         answer: answerIndex

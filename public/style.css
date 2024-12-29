@@ -74,11 +74,34 @@ button:hover {
     border: 2px solid #e9ecef;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
+    margin-bottom: 10px;
 }
 
 .option:hover {
     background-color: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.option.selected {
+    border-color: #007bff;
+}
+
+.option.disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.option.correct {
+    background-color: #4CAF50 !important;
+    color: white;
+    border-color: #45a049;
+}
+
+.option.incorrect {
+    background-color: #ff4444 !important;
+    color: white;
+    border-color: #ff0000;
 }
 
 .timer {

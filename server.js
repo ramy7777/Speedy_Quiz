@@ -64,8 +64,16 @@ io.on('connection', (socket) => {
         player.answered = true;
 
         const question = questions[room.currentQuestion];
-        if (data.answer === question.correct) {
-            // Simple scoring: 1 point per correct answer
+        const isCorrect = data.answer === question.correct;
+        
+        // Send immediate feedback to the player who answered
+        socket.emit('answerResult', {
+            selectedAnswer: data.answer,
+            correctAnswer: question.correct,
+            isCorrect: isCorrect
+        });
+
+        if (isCorrect) {
             player.score += 1;
         }
 
