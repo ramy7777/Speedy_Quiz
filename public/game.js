@@ -100,6 +100,14 @@ function displayQuestion(question) {
                 ${option}
             </div>
         `).join('');
+    // Reset pointer-events to allow clicking
+    optionsContainer.style.pointerEvents = 'auto';
+    
+    // Reset the background colors of options
+    const options = optionsContainer.children;
+    for (let i = 0; i < options.length; i++) {
+        options[i].style.backgroundColor = '';
+    }
 }
 
 function startTimer() {

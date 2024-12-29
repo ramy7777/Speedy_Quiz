@@ -117,7 +117,11 @@ function startGame(roomId) {
 function nextQuestion(roomId) {
     const room = rooms.get(roomId);
     room.currentQuestion++;
-    room.players.forEach(player => player.answered = false);
+    
+    // Reset answered state for all players
+    room.players.forEach(player => {
+        player.answered = false;
+    });
     
     if (room.currentQuestion < questions.length) {
         io.to(roomId).emit('newQuestion', {
