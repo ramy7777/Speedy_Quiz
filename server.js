@@ -45,7 +45,8 @@ io.on('connection', (socket) => {
         socket.emit('roomJoined', { roomId, players: room.players });
         socket.to(roomId).emit('playerJoined', { players: room.players });
 
-        if (room.players.length >= 6) {
+        // Changed from 6 to 2 players for testing
+        if (room.players.length >= 2) {
             startGame(roomId);
         }
     });
