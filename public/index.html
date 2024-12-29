@@ -18,7 +18,12 @@
     <div id="waiting-screen" class="screen hidden">
         <h2>Waiting for Players</h2>
         <div id="player-list"></div>
-        <p>Game will start when 2 players join</p>
+        <p>Minimum players needed: 2</p>
+        <p>Maximum players allowed: 20</p>
+        <div id="host-controls" class="hidden">
+            <button id="start-game-btn" class="disabled">Start Game</button>
+            <p id="start-game-message">Waiting for more players...</p>
+        </div>
     </div>
 
     <div id="game-screen" class="screen hidden">

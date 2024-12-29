@@ -31,7 +31,8 @@ io.on('connection', (socket) => {
             rooms.set(roomId, {
                 players: [],
                 currentQuestion: 0,
-                gameStarted: false
+                gameStarted: false,
+                hostId: socket.id // First player becomes the host
             });
         }
 
@@ -40,15 +41,28 @@ io.on('connection', (socket) => {
             id: socket.id,
             name: playerName,
             score: 0,
-            answered: false
+            answered: false,
+            isHost: room.players.length === 0 // First player is the host
         });
 
-        socket.emit('roomJoined', { roomId, players: room.players });
-        socket.to(roomId).emit('playerJoined', { players: room.players });
+        // Emit room joined event with host status
+        socket.emit('roomJoined', { 
+            roomId, 
+            players: room.players,
+            isHost: room.players.length === 1,
+            minPlayers: 2,
+            maxPlayers: 20
+        });
+        
+        // Broadcast to other players
+        socket.to(roomId).emit('playerJoined', { 
+            players: room.players
+        });
 
         // Changed from 6 to 2 players for testing
         if (room.players.length >= 2) {
-            startGame(roomId);
+            // Do not start game automatically
+            // startGame(roomId);
         }
     });
 
@@ -97,15 +111,48 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Add start game event handler
+    socket.on('startGame', (roomId) => {
+        const room = rooms.get(roomId);
+        if (!room || room.hostId !== socket.id || room.players.length < 2) return;
+
+        room.gameStarted = true;
+        startGame(roomId);
+    });
+
+    // Handle disconnect
     socket.on('disconnect', () => {
-        // Handle player disconnect
-        console.log('User disconnected');
+        for (const [roomId, room] of rooms) {
+            const playerIndex = room.players.findIndex(p => p.id === socket.id);
+            if (playerIndex !== -1) {
+                room.players.splice(playerIndex, 1);
+                
+                // If host disconnects, assign new host
+                if (room.hostId === socket.id && room.players.length > 0) {
+                    room.hostId = room.players[0].id;
+                    room.players[0].isHost = true;
+                    io.to(roomId).emit('newHost', { 
+                        hostId: room.players[0].id 
+                    });
+                }
+
+                io.to(roomId).emit('playerLeft', { 
+                    players: room.players 
+                });
+
+                // If room is empty, remove it
+                if (room.players.length === 0) {
+                    rooms.delete(roomId);
+                }
+                break;
+            }
+        }
     });
 });
 
 function findAvailableRoom() {
     for (const [roomId, room] of rooms) {
-        if (room.players.length < 10 && !room.gameStarted) {
+        if (room.players.length < 20 && !room.gameStarted) {
             return roomId;
         }
     }

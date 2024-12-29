@@ -16,9 +16,13 @@ const optionsContainer = document.getElementById('options-container');
 const timerDisplay = document.getElementById('timer');
 const scoreboardList = document.getElementById('scoreboard-list');
 const playAgainBtn = document.getElementById('play-again-btn');
+const startGameBtn = document.getElementById('start-game-btn');
+const startGameMessage = document.getElementById('start-game-message');
+const hostControls = document.getElementById('host-controls');
 
 let currentRoom = null;
 let gameTimer = null;
+let isHost = false;
 
 // Event Listeners
 joinButton.addEventListener('click', () => {
@@ -33,15 +37,41 @@ playAgainBtn.addEventListener('click', () => {
     playerNameInput.value = '';
 });
 
+startGameBtn.addEventListener('click', () => {
+    if (!startGameBtn.classList.contains('disabled')) {
+        socket.emit('startGame', currentRoom);
+    }
+});
+
 // Socket Events
 socket.on('roomJoined', (data) => {
     currentRoom = data.roomId;
+    isHost = data.isHost;
+    
+    if (isHost) {
+        hostControls.classList.remove('hidden');
+    }
+    
     updatePlayerList(data.players);
+    updateStartButton(data.players.length, data.minPlayers);
     showScreen('waiting');
 });
 
 socket.on('playerJoined', (data) => {
     updatePlayerList(data.players);
+    updateStartButton(data.players.length, 2);
+});
+
+socket.on('playerLeft', (data) => {
+    updatePlayerList(data.players);
+    updateStartButton(data.players.length, 2);
+});
+
+socket.on('newHost', (data) => {
+    if (socket.id === data.hostId) {
+        isHost = true;
+        hostControls.classList.remove('hidden');
+    }
 });
 
 socket.on('gameStart', (data) => {
@@ -100,8 +130,11 @@ function showScreen(screenName) {
 
 function updatePlayerList(players) {
     playerList.innerHTML = players
-        .map(player => `<div class="player-item">${player.name}</div>`)
-        .join('');
+        .map(player => `
+            <div class="player-item">
+                ${player.name} ${player.isHost ? '(Host)' : ''}
+            </div>
+        `).join('');
 }
 
 function displayQuestion(question) {
@@ -188,4 +221,16 @@ function displayFinalScores(players) {
                 <span>${player.score}</span>
             </div>
         `).join('');
+}
+
+function updateStartButton(playerCount, minPlayers) {
+    if (isHost) {
+        if (playerCount >= minPlayers) {
+            startGameBtn.classList.remove('disabled');
+            startGameMessage.textContent = 'Click to start the game!';
+        } else {
+            startGameBtn.classList.add('disabled');
+            startGameMessage.textContent = `Waiting for more players... (${playerCount}/${minPlayers})`;
+        }
+    }
 }
