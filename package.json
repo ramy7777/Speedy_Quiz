@@ -1,7 +1,7 @@
 {
-  "name": "speedy-quiz-royale",
+  "name": "virtual-worlds-team-building",
   "version": "1.0.0",
-  "description": "A real-time multiplayer trivia game",
+  "description": "Virtual Worlds New Year Team Building - A multiplayer quiz game for team building",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

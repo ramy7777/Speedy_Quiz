@@ -19,7 +19,6 @@ const playAgainBtn = document.getElementById('play-again-btn');
 
 let currentRoom = null;
 let gameTimer = null;
-let currentTimeLeft = 0;
 
 // Event Listeners
 joinButton.addEventListener('click', () => {
@@ -117,7 +116,6 @@ function startTimer() {
     timerDisplay.textContent = timeLeft;
     gameTimer = setInterval(() => {
         timeLeft--;
-        currentTimeLeft = timeLeft;
         timerDisplay.textContent = timeLeft;
         
         if (timeLeft <= 0) {
@@ -131,8 +129,7 @@ function submitAnswer(answerIndex) {
     clearInterval(gameTimer);
     socket.emit('answer', {
         roomId: currentRoom,
-        answer: answerIndex,
-        timeLeft: currentTimeLeft
+        answer: answerIndex
     });
     optionsContainer.style.pointerEvents = 'none';
 }

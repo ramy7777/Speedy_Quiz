@@ -65,9 +65,8 @@ io.on('connection', (socket) => {
 
         const question = questions[room.currentQuestion];
         if (data.answer === question.correct) {
-            // Add time bonus: faster answers get more points
-            const timeBonus = Math.max(0, data.timeLeft);
-            player.score += 1 + (timeBonus / 10);
+            // Simple scoring: 1 point per correct answer
+            player.score += 1;
         }
 
         // Broadcast updated scores to all players
@@ -147,5 +146,5 @@ function endGame(roomId) {
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Virtual Worlds New Year Team Building game server running on port ${PORT}`);
 });
