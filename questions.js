@@ -1,9 +1,35 @@
-const specialQuestion = {
-    question: "Who is the star couple of the night?",
-    options: ["Ramy & Zeina", "Imad & Doaa", "Samer & Lara", "Amjad & Nancy"],
-    correct: 1,
-    isSpecial: true
-};
+const specialQuestions = [
+    {
+        question: "Who is the star couple of the night?",
+        options: ["Ramy & Zeina", "Imad & Doaa", "Samer & Lara", "Amjad & Nancy"],
+        correct: 1,
+        isSpecial: true
+    },
+    {
+        question: "Who is the paddle master?",
+        options: ["Ramy", "Imad", "Samer", "Amjad"],
+        correct: 0,
+        isSpecial: true
+    },
+    {
+        question: "Who is the king of desert?",
+        options: ["Imad", "Ramy", "Samer", "Amjad"],
+        correct: 0,
+        isSpecial: true
+    },
+    {
+        question: "Who has car obsession?",
+        options: ["Imad", "Ramy", "Samer", "Amjad"],
+        correct: 2,
+        isSpecial: true
+    },
+    {
+        question: "Who keeps making diet and his weight keeps increasing?",
+        options: ["Imad Pamela", "Ramy", "Amjad", "Imad Doaa"],
+        correct: 0,
+        isSpecial: true
+    }
+];
 
 const allQuestions = [
     {
@@ -484,4 +510,4 @@ const allQuestions = [
     }
 ];
 
-module.exports = { allQuestions, specialQuestion };
+module.exports = { allQuestions, specialQuestions };
