@@ -94,6 +94,19 @@ socket.on('youAreHost', () => {
     startGameMessage.textContent = 'Click Start Game when ready!';
 });
 
+socket.on('answerResult', (data) => {
+    const options = optionsContainer.getElementsByClassName('option');
+    const selectedOption = options[data.selectedAnswer];
+    const correctOption = options[data.correctAnswer];
+    
+    if (data.correct) {
+        selectedOption.classList.add('correct');
+    } else {
+        selectedOption.classList.add('incorrect');
+        correctOption.classList.add('correct');
+    }
+});
+
 // Helper Functions
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(screen => {

@@ -194,36 +194,51 @@ button:hover:not(.disabled) {
 }
 
 .option {
+    background-color: #2c3e50;
+    color: white;
     padding: 15px 20px;
     margin: 10px 0;
-    background: rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+    width: 100%;
+    text-align: left;
+    font-size: 1.1em;
 }
 
 .option:hover:not(.disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    background-color: #34495e;
+    transform: translateX(10px);
+}
+
+.option.disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .option.correct {
-    background: rgba(76, 175, 80, 0.3) !important;
-    border-color: #4CAF50;
+    background-color: #27ae60 !important;
+    color: white;
+    animation: correctAnswer 0.5s ease;
 }
 
 .option.incorrect {
-    background: rgba(244, 67, 54, 0.3) !important;
-    border-color: #f44336;
+    background-color: #e74c3c !important;
+    color: white;
+    animation: incorrectAnswer 0.5s ease;
 }
 
-.option.selected {
-    animation: pulse 0.5s;
+@keyframes correctAnswer {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes incorrectAnswer {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
 }
 
 .timer {
@@ -237,12 +252,6 @@ button:hover:not(.disabled) {
 .timer.warning {
     color: #ff4444;
     animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
 }
 
 .scoreboard {

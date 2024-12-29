@@ -98,16 +98,28 @@ io.on('connection', (socket) => {
         const player = players.get(socket.id);
         if (player && !player.answered && gameInProgress) {
             player.answered = true;
-            if (answer === questions[currentQuestion].correct) {
+            const isCorrect = answer === questions[currentQuestion].correct;
+            if (isCorrect) {
                 player.score += 100;
             }
+            
+            // Send back the result to the player who answered
+            socket.emit('answerResult', {
+                correct: isCorrect,
+                selectedAnswer: answer,
+                correctAnswer: questions[currentQuestion].correct
+            });
+            
             io.emit('updateScores', Array.from(players.values()));
 
             // Check if all players have answered
             const allAnswered = Array.from(players.values()).every(p => p.answered);
             if (allAnswered) {
                 clearInterval(timerInterval);
-                moveToNextQuestion();
+                // Wait 2 seconds to show the correct/incorrect colors
+                setTimeout(() => {
+                    moveToNextQuestion();
+                }, 2000);
             }
         }
     });
