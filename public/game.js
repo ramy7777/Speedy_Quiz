@@ -72,11 +72,7 @@ socket.on('updateTimer', (data) => {
 socket.on('gameOver', (rankedPlayers) => {
     showScreen('scoreboard-screen');
     displayFinalScores(rankedPlayers);
-    // Only play victory sound for top 3 players
-    const currentPlayer = rankedPlayers.find(p => p.name === playerName);
-    if (currentPlayer && currentPlayer.rank <= 3) {
-        soundManager.playGameOver();
-    }
+    soundManager.playGameOver();  // Play game over sound for everyone
 });
 
 socket.on('playerLeft', (data) => {
